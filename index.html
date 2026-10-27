@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NZ Curriculum Phase 3 - Master Number Revision</title>
+  <style>
+    :root {
+      --primary: #0066cc;
+      --secondary: #004080;
+      --bg: #f4f7f9;
+      --card-bg: #ffffff;
+      --text: #333333;
+      --border: #cccccc;
+      --correct: #28a745;
+      --incorrect: #dc3545;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 750px;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    h1, h2, h3 {
+      color: var(--secondary);
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    .btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background-color: var(--secondary);
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .option-btn {
+      background: white;
+      border: 2px solid var(--border);
+      padding: 14px;
+      border-radius: 8px;
+      text-align: left;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .option-btn:hover {
+      border-color: var(--primary);
+      background-color: #f0f7ff;
+    }
+
+    .option-btn.selected {
+      border-color: var(--primary);
+      background-color: #e0f0ff;
+      font-weight: bold;
+    }
+
+    .svg-illustration {
+      display: block;
+      margin: 20px auto;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background-color: #e0e0e0;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background-color: var(--primary);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .teacher-panel {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px dashed var(--border);
+    }
+
+    .feedback-box {
+      background-color: #f8f9fa;
+      border-left: 4px solid var(--primary);
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 4px;
+    }
+
+    .curriculum-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      color: white;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .stage-working-towards { background-color: #ff9800; }
+    .stage-at { background-color: #28a745; }
+    .stage-beyond { background-color: #007bff; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- PAGE 0: STUDENT DETAILS -->
+  <div id="page-0" class="page active">
+    <h1>NZ Curriculum Phase 3: Master Number Revision</h1>
+    <p>Please enter your full name and year level to begin your test.</p>
+    <div class="input-group">
+      <label for="studentName">Full Name:</label>
+      <input type="text" id="studentName" placeholder="e.g., Tane Miller">
+    </div>
+    <div class="input-group">
+      <label for="yearLevel">Year Level:</label>
+      <input type="text" id="yearLevel" placeholder="e.g., Year 7 or Year 8">
+    </div>
+    <button class="btn" onclick="startTest()">Start Test</button>
+  </div>
+
+  <!-- CONTAINER FOR TEST QUESTIONS -->
+  <div id="test-container"></div>
+
+  <!-- FINAL PAGE: RESULTS & FEEDBACK -->
+  <div id="page-31" class="page">
+    <h2>Test Complete!</h2>
+    <div id="curriculumBadge" class="curriculum-badge"></div>
+    <p id="studentScoreText"></p>
+    
+    <div class="feedback-box">
+      <h3>Areas for Improvement & Feedback</h3>
+      <ul id="feedbackList"></ul>
+    </div>
+
+    <!-- TEACHER ACCESS SECTION -->
+    <div class="teacher-panel">
+      <h3>Teacher Portal</h3>
+      <p>Enter Teacher PIN to download CSV results directly:</p>
+      <div style="display: flex; gap: 10px; max-width: 300px;">
+        <input type="password" id="teacherPin" placeholder="Enter PIN" style="padding: 10px;">
+        <button class="btn" onclick="verifyPinAndExport()">Export CSV</button>
+      </div>
+      <p id="pinError" style="color: red; display: none; margin-top: 5px;">Incorrect PIN.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // LIVE GOOGLE APPS SCRIPT WEB APP URL
+  const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbywWyahv1BlsvnVaIgQFQXdms7_k2mEqXDd63YvqE7SZbtDoP1mKxdKArgrQnfSDw_m/exec";
+
+  let studentData = {
+    name: "",
+    year: "",
+    answers: {},
+    score: 0,
+    percentage: 0,
+    stage: "",
+    improvements: []
+  };
+
+  const questions = [
+    {
+      id: 1,
+      question: "Which expression correctly expands 45,208 using powers of 10?",
+      svg: `<svg class="svg-illustration" width="300" height="70" viewBox="0 0 300 70">
+              <rect x="10" y="10" width="280" height="50" rx="8" fill="#e0f0ff" stroke="#0066cc" stroke-width="2"/>
+              <text x="150" y="42" font-size="22" font-weight="bold" fill="#004080" text-anchor="middle">45,208</text>
+            </svg>`,
+      options: [
+        { label: "A", text: "4 × 10⁴ + 5 × 10³ + 2 × 10² + 8", correct: true },
+        { label: "B", text: "4 × 10⁵ + 5 × 10⁴ + 2 × 10³ + 8 × 10¹", correct: false },
+        { label: "C", text: "45 × 10³ + 20 × 10¹ + 8", correct: false },
+        { label: "D", text: "4 × 10⁴ + 5 × 10³ + 2 × 10¹ + 8 × 10⁰", correct: false }
+      ],
+      topic: "Expanded form with powers of 10"
+    },
+    {
+      id: 2,
+      question: "Write 0.001 as a fraction and as a power of 10.",
+      svg: null,
+      options: [
+        { label: "A", text: "1/100 and 10⁻²", correct: false },
+        { label: "B", text: "1/1000 and 10⁻³", correct: true },
+        { label: "C", text: "1/10 and 10⁻¹", correct: false },
+        { label: "D", text: "1/1000 and 10³", correct: false }
+      ],
+      topic: "Negative powers of 10 and decimals"
+    },
+    {
+      id: 3,
+      question: "Which group of numbers contains ONLY prime numbers?",
+      svg: null,
+      options: [
+        { label: "A", text: "2, 3, 5, 9, 11", correct: false },
+        { label: "B", text: "2, 3, 5, 7, 11, 13", correct: true },
+        { label: "C", text: "1, 2, 3, 5, 7, 11", correct: false },
+        { label: "D", text: "3, 5, 7, 11, 15, 17", correct: false }
+      ],
+      topic: "Identifying prime numbers"
+    },
+    {
+      id: 4,
+      question: "Find the Highest Common Factor (HCF) of 18 and 30.",
+      svg: null,
+      options: [
+        { label: "A", text: "3", correct: false },
+        { label: "B", text: "9", correct: false },
+        { label: "C", text: "6", correct: true },
+        { label: "D", text: "90", correct: false }
+      ],
+      topic: "Highest Common Factor (HCF)"
+    },
+    {
+      id: 5,
+      question: "Find the Least Common Multiple (LCM) of 6 and 8.",
+      svg: null,
+      options: [
+        { label: "A", text: "24", correct: true },
+        { label: "B", text: "48", correct: false },
+        { label: "C", text: "12", correct: false },
+        { label: "D", text: "2", correct: false }
+      ],
+      topic: "Least Common Multiple (LCM)"
+    },
+    {
+      id: 6,
+      question: "Calculate: √81 + ∛64",
+      svg: null,
+      options: [
+        { label: "A", text: "12", correct: false },
+        { label: "B", text: "13", correct: true },
+        { label: "C", text: "17", correct: false },
+        { label: "D", text: "15", correct: false }
+      ],
+      topic: "Square roots and cube roots"
+    },
+    {
+      id: 7,
+      question: "Write 60 as a product of prime factors using exponents.",
+      svg: null,
+      options: [
+        { label: "A", text: "2² × 3 × 5", correct: true },
+        { label: "B", text: "2 × 3² × 5", correct: false },
+        { label: "C", text: "4 × 3 × 5", correct: false },
+        { label: "D", text: "2³ × 15", correct: false }
+      ],
+      topic: "Prime factorisation with exponents"
+    },
+    {
+      id: 8,
+      question: "Look at the number line below. Which number sits at point B?",
+      svg: `<svg class="svg-illustration" width="350" height="70" viewBox="0 0 350 70">
+              <line x1="20" y1="35" x2="330" y2="35" stroke="#333" stroke-width="3"/>
+              <line x1="50" y1="25" x2="50" y2="45" stroke="#333" stroke-width="2"/>
+              <line x1="120" y1="25" x2="120" y2="45" stroke="#333" stroke-width="2"/>
+              <line x1="190" y1="25" x2="190" y2="45" stroke="#333" stroke-width="2"/>
+              <line x1="260" y1="25" x2="260" y2="45" stroke="#333" stroke-width="2"/>
+              <text x="50" y="60" font-size="16" text-anchor="middle">-6</text>
+              <text x="120" y="60" font-size="16" text-anchor="middle" font-weight="bold" fill="#0066cc">B</text>
+              <text x="190" y="60" font-size="16" text-anchor="middle">0</text>
+              <text x="260" y="60" font-size="16" text-anchor="middle">3</text>
+            </svg>`,
+      options: [
+        { label: "A", text: "-2", correct: false },
+        { label: "B", text: "-4", correct: false },
+        { label: "C", text: "-3", correct: true },
+        { label: "D", text: "-1", correct: false }
+      ],
+      topic: "Integer number lines"
+    },
+    {
+      id: 9,
+      question: "What is the additive inverse of 12, and what is their sum?",
+      svg: null,
+      options: [
+        { label: "A", text: "Inverse is -12; sum is 0", correct: true },
+        { label: "B", text: "Inverse is 12; sum is 24", correct: false },
+        { label: "C", text: "Inverse is -12; sum is -24", correct: false },
+        { label: "D", text: "Inverse is 1/12; sum is 1", correct: false }
+      ],
+      topic: "Additive inverses"
+    },
+    {
+      id: 10,
+      question: "Solve: -6 + 10 - 8",
+      svg: null,
+      options: [
+        { label: "A", text: "4", correct: false },
+        { label: "B", text: "-4", correct: true },
+        { label: "C", text: "12", correct: false },
+        { label: "D", text: "-24", correct: false }
+      ],
+      topic: "Operations with integers"
+    },
+    {
+      id: 11,
+      question: "Solve using the correct order of operations: 8 + 2 × (5² - 10)",
+      svg: null,
+      options: [
+        { label: "A", text: "38", correct: true },
+        { label: "B", text: "150", correct: false },
+        { label: "C", text: "50", correct: false },
+        { label: "D", text: "30", correct: false }
+      ],
+      topic: "Order of operations (GEMA)"
+    },
+    {
+      id: 12,
+      question: "Calculate: 2/3 + 3/5. Write your answer in simplest form.",
+      svg: null,
+      options: [
+        { label: "A", text: "5/8", correct: false },
+        { label: "B", text: "1 4/15", correct: true },
+        { label: "C", text: "19/15", correct: false },
+        { label: "D", text: "1 1/5", correct: false }
+      ],
+      topic: "Adding fractions with unlike denominators"
+    },
+    {
+      id: 13,
+      question: "Calculate: 5/6 - 1/4 in simplest form.",
+      svg: null,
+      options: [
+        { label: "A", text: "4/2", correct: false },
+        { label: "B", text: "7/12", correct: true },
+        { label: "C", text: "4/12", correct: false },
+        { label: "D", text: "1/2", correct: false }
+      ],
+      topic: "Subtracting fractions"
+    },
+    {
+      id: 14,
+      question: "Calculate: 3/4 × 8/9 in simplest form.",
+      svg: null,
+      options: [
+        { label: "A", text: "2/3", correct: true },
+        { label: "B", text: "24/36", correct: false },
+        { label: "C", text: "11/13", correct: false },
+        { label: "D", text: "3/8", correct: false }
+      ],
+      topic: "Multiplying fractions"
+    },
+    {
+      id: 15,
+      question: "If 4/7 of a class set is 28 books, how many total books are in the set?",
+      svg: null,
+      options: [
+        { label: "A", text: "49 books", correct: true },
+        { label: "B", text: "16 books", correct: false },
+        { label: "C", text: "35 books", correct: false },
+        { label: "D", text: "56 books", correct: false }
+      ],
+      topic: "Finding the whole amount given a fraction"
+    },
+    {
+      id: 16,
+      question: "Which list of numbers is ordered from SMALLEST to LARGEST?",
+      svg: null,
+      options: [
+        { label: "A", text: "-5.2, -5, -4.8, 0.1", correct: true },
+        { label: "B", text: "-4.8, -5, -5.2, 0.1", correct: false },
+        { label: "C", text: "0.1, -4.8, -5, -5.2", correct: false },
+        { label: "D", text: "-5, -5.2, -4.8, 0.1", correct: false }
+      ],
+      topic: "Comparing and ordering negative decimals"
+    },
+    {
+      id: 17,
+      question: "Convert the fraction 7/8 into a decimal.",
+      svg: null,
+      options: [
+        { label: "A", text: "0.875", correct: true },
+        { label: "B", text: "0.78", correct: false },
+        { label: "C", text: "0.75", correct: false },
+        { label: "D", text: "0.85", correct: false }
+      ],
+      topic: "Converting fractions to terminating decimals"
+    },
+    {
+      id: 18,
+      question: "Which fraction turns into a repeating decimal?",
+      svg: null,
+      options: [
+        { label: "A", text: "1/2", correct: false },
+        { label: "B", text: "1/3", correct: true },
+        { label: "C", text: "3/5", correct: false },
+        { label: "D", text: "9/10", correct: false }
+      ],
+      topic: "Identifying repeating decimals"
+    },
+    {
+      id: 19,
+      question: "Multiply: 3.4 × 1.2",
+      svg: null,
+      options: [
+        { label: "A", text: "4.08", correct: true },
+        { label: "B", text: "40.8", correct: false },
+        { label: "C", text: "4.80", correct: false },
+        { label: "D", text: "3.68", correct: false }
+      ],
+      topic: "Multiplying positive decimals"
+    },
+    {
+      id: 20,
+      question: "Estimate the answer: 0.89 + 0.95 + 0.92. Is the total less than 3?",
+      svg: null,
+      options: [
+        { label: "A", text: "Yes, because each decimal is slightly less than 1.", correct: true },
+        { label: "B", text: "No, because their sum is greater than 3.5.", correct: false },
+        { label: "C", text: "No, because decimals always add up to whole numbers.", correct: false },
+        { label: "D", text: "Yes, because the total is exactly 2.", correct: false }
+      ],
+      topic: "Estimation with decimals"
+    },
+    {
+      id: 21,
+      question: "Round 23.4568 to the nearest hundredth.",
+      svg: null,
+      options: [
+        { label: "A", text: "23.46", correct: true },
+        { label: "B", text: "23.45", correct: false },
+        { label: "C", text: "23.50", correct: false },
+        { label: "D", text: "23.457", correct: false }
+      ],
+      topic: "Rounding decimals to hundredths"
+    },
+    {
+      id: 22,
+      question: "Calculate 40% of $250.",
+      svg: null,
+      options: [
+        { label: "A", text: "$100.00", correct: true },
+        { label: "B", text: "$80.00", correct: false },
+        { label: "C", text: "$120.00", correct: false },
+        { label: "D", text: "$150.00", correct: false }
+      ],
+      topic: "Finding percentages of whole numbers"
+    },
+    {
+      id: 23,
+      question: "If 30% of a money total is $45, what is the full 100% total?",
+      svg: null,
+      options: [
+        { label: "A", text: "$150.00", correct: true },
+        { label: "B", text: "$135.00", correct: false },
+        { label: "C", text: "$180.00", correct: false },
+        { label: "D", text: "$120.00", correct: false }
+      ],
+      topic: "Finding the whole (100%) given a percentage"
+    },
+    {
+      id: 24,
+      question: "Why does 60% of 50 equal 50% of 60?",
+      svg: null,
+      options: [
+        { label: "A", text: "Both calculations simplify to 30", correct: true },
+        { label: "B", text: "Because 50 and 60 are even numbers", correct: false },
+        { label: "C", text: "Because percentage signs cancel each other out", correct: false },
+        { label: "D", text: "Because dividing by 10 changes the order", correct: false }
+      ],
+      topic: "Percentage equivalence in calculations"
+    },
+    {
+      id: 25,
+      question: "A store total comes to $18.84. In NZ cash, what does the customer pay?",
+      svg: `<svg class="svg-illustration" width="220" height="80" viewBox="0 0 220 80">
+              <rect x="10" y="10" width="200" height="60" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+              <text x="110" y="45" font-size="16" font-weight="bold" fill="#1b5e20" text-anchor="middle">TOTAL: $18.84</text>
+            </svg>`,
+      options: [
+        { label: "A", text: "$18.80", correct: true },
+        { label: "B", text: "$18.85", correct: false },
+        { label: "C", text: "$18.90", correct: false },
+        { label: "D", text: "$19.00", correct: false }
+      ],
+      topic: "Financial mathematics: NZ cash rounding"
+    },
+    {
+      id: 26,
+      question: "Calculate the sale price of $120 shoes after a 25% discount.",
+      svg: null,
+      options: [
+        { label: "A", text: "$90.00", correct: true },
+        { label: "B", text: "$30.00", correct: false },
+        { label: "C", text: "$95.00", correct: false },
+        { label: "D", text: "$100.00", correct: false }
+      ],
+      topic: "Financial mathematics: Discount calculations"
+    },
+    {
+      id: 27,
+      question: "A gym plan costs $15 per week. How much does it cost in total for 1 full year (52 weeks)?",
+      svg: null,
+      options: [
+        { label: "A", text: "$780.00", correct: true },
+        { label: "B", text: "$600.00", correct: false },
+        { label: "C", text: "$750.00", correct: false },
+        { label: "D", text: "$820.00", correct: false }
+      ],
+      topic: "Financial mathematics: Yearly finance plans"
+    },
+    {
+      id: 28,
+      question: "Share $80 between Aroha and Nikau in the ratio 3:5. How much does Nikau get?",
+      svg: null,
+      options: [
+        { label: "A", text: "$50.00", correct: true },
+        { label: "B", text: "$30.00", correct: false },
+        { label: "C", text: "$40.00", correct: false },
+        { label: "D", text: "$45.00", correct: false }
+      ],
+      topic: "Dividing quantities using ratios"
+    },
+    {
+      id: 29,
+      question: "A drink uses 2 cups of lime juice for every 5 cups of water. How many cups of water are needed if you use 10 cups of lime juice?",
+      svg: null,
+      options: [
+        { label: "A", text: "25 cups", correct: true },
+        { label: "B", text: "20 cups", correct: false },
+        { label: "C", text: "15 cups", correct: false },
+        { label: "D", text: "30 cups", correct: false }
+      ],
+      topic: "Proportional reasoning with ratios"
+    },
+    {
+      id: 30,
+      question: "Calculate: 425 ÷ 20",
+      svg: null,
+      options: [
+        { label: "A", text: "21.25", correct: true },
+        { label: "B", text: "21.5", correct: false },
+        { label: "C", text: "20.25", correct: false },
+        { label: "D", text: "22.05", correct: false }
+      ],
+      topic: "Dividing whole numbers resulting in decimals"
+    }
+  ];
+
+  function buildTestPages() {
+    const container = document.getElementById("test-container");
+    container.innerHTML = "";
+    questions.forEach((q, index) => {
+      const pageNum = index + 1;
+      const totalPages = questions.length;
+      
+      let html = `
+        <div id="page-${pageNum}" class="page">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${(pageNum / totalPages) * 100}%"></div>
+          </div>
+          <small>Question ${pageNum} of ${totalPages}</small>
+          <h2>${q.question}</h2>
+          ${q.svg ? q.svg : ''}
+          <div class="options-grid">
+      `;
+
+      q.options.forEach(opt => {
+        html += `
+          <button class="option-btn" onclick="selectOption(${pageNum}, '${opt.label}', ${opt.correct}, this)">
+            <strong>${opt.label}.</strong> ${opt.text}
+          </button>
+        `;
+      });
+
+      html += `
+          </div>
+          <div style="margin-top: 25px; display: flex; justify-content: space-between;">
+            ${pageNum > 1 ? `<button class="btn" onclick="navigatePage(${pageNum - 1})">Previous</button>` : '<div></div>'}
+            ${pageNum < totalPages ? `<button class="btn" onclick="navigatePage(${pageNum + 1})">Next</button>` : `<button class="btn" onclick="submitTest()">Submit Test</button>`}
+          </div>
+        </div>
+      `;
+      container.innerHTML += html;
+    });
+  }
+
+  function startTest() {
+    const nameInput = document.getElementById("studentName");
+    const yearInput = document.getElementById("yearLevel");
+    
+    const name = nameInput ? nameInput.value.trim() : "";
+    const year = yearInput ? yearInput.value.trim() : "";
+
+    if (!name || !year) {
+      alert("Please enter your name and year level.");
+      return;
+    }
+
+    studentData.name = name;
+    studentData.year = year;
+    navigatePage(1);
+  }
+
+  function navigatePage(pageNum) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    const targetPage = document.getElementById(`page-${pageNum}`);
+    if (targetPage) {
+      targetPage.classList.add("active");
+    }
+  }
+
+  function selectOption(qNum, label, isCorrect, btnElement) {
+    const parent = btnElement.parentElement;
+    parent.querySelectorAll(".option-btn").forEach(b => b.classList.remove("selected"));
+    btnElement.classList.add("selected");
+
+    studentData.answers[qNum] = {
+      label: label,
+      isCorrect: isCorrect,
+      topic: questions[qNum - 1].topic
+    };
+  }
+
+  function submitTest() {
+    if (Object.keys(studentData.answers).length < questions.length) {
+      if (!confirm("You have unanswered questions. Are you sure you want to submit?")) {
+        return;
+      }
+    }
+
+    let score = 0;
+    let improvements = [];
+
+    questions.forEach(q => {
+      const ans = studentData.answers[q.id];
+      if (ans && ans.isCorrect) {
+        score++;
+      } else {
+        improvements.push(q.topic);
+      }
+    });
+
+    studentData.score = score;
+    studentData.percentage = Math.round((score / questions.length) * 100);
+    studentData.improvements = [...new Set(improvements)];
+
+    if (studentData.percentage < 50) {
+      studentData.stage = "Working Towards Phase 3";
+    } else if (studentData.percentage <= 80) {
+      studentData.stage = "At Phase 3 (Proficient)";
+    } else {
+      studentData.stage = "Beyond Phase 3 (Advanced)";
+    }
+
+    displayResults();
+    sendDataToGoogleSheet();
+  }
+
+  function displayResults() {
+    navigatePage(31);
+    
+    const badge = document.getElementById("curriculumBadge");
+    badge.innerText = studentData.stage;
+    if (studentData.percentage < 50) badge.className = "curriculum-badge stage-working-towards";
+    else if (studentData.percentage <= 80) badge.className = "curriculum-badge stage-at";
+    else badge.className = "curriculum-badge stage-beyond";
+
+    document.getElementById("studentScoreText").innerHTML = `
+      Great effort, <strong>${studentData.name}</strong> (${studentData.year})!<br>
+      You scored <strong>${studentData.score} / ${questions.length}</strong> (${studentData.percentage}%).
+    `;
+
+    const feedbackList = document.getElementById("feedbackList");
+    feedbackList.innerHTML = "";
+    if (studentData.improvements.length === 0) {
+      feedbackList.innerHTML = "<li>Outstanding performance! You showed complete mastery over Phase 3 Number concepts.</li>";
+    } else {
+      studentData.improvements.forEach(topic => {
+        const li = document.createElement("li");
+        li.innerText = topic;
+        feedbackList.appendChild(li);
+      });
+    }
+  }
+
+  function sendDataToGoogleSheet() {
+    const payload = {
+      studentName: studentData.name,
+      yearLevel: studentData.year,
+      score: studentData.score + " / " + questions.length,
+      percentage: studentData.percentage,
+      curriculumStage: studentData.stage,
+      areasForImprovement: studentData.improvements.join("; ")
+    };
+
+    fetch(GOOGLE_SHEET_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error("Error sending data:", err));
+  }
+
+  function verifyPinAndExport() {
+    const pin = document.getElementById("teacherPin").value;
+    if (pin === "1335") {
+      document.getElementById("pinError").style.display = "none";
+      exportToCSV();
+    } else {
+      document.getElementById("pinError").style.display = "block";
+    }
+  }
+
+  function exportToCSV() {
+    const headers = ["Student Name", "Year Level", "Score", "Percentage", "Curriculum Stage", "Areas for Improvement"];
+    const row = [
+      `"${studentData.name}"`,
+      `"${studentData.year}"`,
+      `"${studentData.score}/${questions.length}"`,
+      `"${studentData.percentage}%"`,
+      `"${studentData.stage}"`,
+      `"${studentData.improvements.join('; ')}"`
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), row.join(",")].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `student_result_${studentData.name.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  window.onload = buildTestPages;
+</script>
+
+</body>
+</html>
